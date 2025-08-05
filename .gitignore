@@ -1,3 +1,5 @@
 tracking_09/
 tracking_09_dataset/
+results/
+*.pt
 *.mp4
