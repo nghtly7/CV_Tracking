@@ -3,3 +3,6 @@ tracking_09_dataset/
 results/
 *.pt
 *.mp4
+frames/
+2d_tracking_results.json
+GroundTruthData/
