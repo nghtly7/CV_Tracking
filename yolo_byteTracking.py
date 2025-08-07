@@ -6,9 +6,9 @@ model = YOLO('best_small.pt')
 
 # Percorsi dei video o delle cartelle di frame
 video_paths = {
-    'out2': 'frames/out2',
-    'out4': 'frames/out4',
-    'out13': 'frames/out13',
+    'out2': 'raw_video/out2.mp4',
+    'out4': 'raw_video/out4.mp4',
+    'out13': 'raw_video/out13.mp4',
     # Esempio per cartella di frame:
     # 'out2_frames': 'frames/out2/'
 }
@@ -29,7 +29,7 @@ for angle_name, source_path in video_paths.items():
     else:
         tracking_source = source_path
 
-    results = model.track(source=tracking_source, conf=0.3, iou=0.5, persist=True, tracker='bytetrack.yaml')
+    results = model.track(source=tracking_source, conf=0.3, iou=0.5, persist=True, tracker='bytetrack.yaml',show=True, save=True)
 
     angle_tracking_data = []
     for i, r in enumerate(results):

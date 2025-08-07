@@ -6,3 +6,8 @@ results/
 frames/
 2d_tracking_results.json
 GroundTruthData/
+complete_dataset_yolov8/
+detection/
+tracked/
+dataset_report.txt
+dataset_analysis.png
