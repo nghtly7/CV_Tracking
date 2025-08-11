@@ -4,7 +4,7 @@ import os
 from deep_sort_realtime.deepsort_tracker import DeepSort
 
 # === CONFIG ===
-video_path = "raw_video/out2g1.mp4"
+video_path = "raw_video/out4.mp4"
 video_name = os.path.splitext(os.path.basename(video_path))[0]
 detections_json = f"detection/{video_name}_detections.json"
 output_video_path = f"tracked/{video_name}_tracked.mp4"
@@ -22,11 +22,15 @@ fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 out = cv2.VideoWriter(output_video_path, fourcc, fps, (W, H))
 
 # === TRACKER ===
-tracker = DeepSort(max_age=30)
+tracker = DeepSort(max_age=30, n_init=1)  # conferma dopo 1 hit
 
 # === CARICA DETECTION ===
 with open(detections_json, "r") as f:
     all_detections = json.load(f)
+
+# Cache ultimi valori validi per ogni track_id
+last_conf = {}   # track_id -> float
+last_class = {}  # track_id -> int
 
 # === TRACKING ===
 all_tracks = []
@@ -41,37 +45,72 @@ while True:
 
     # Adatta le detection al formato richiesto da DeepSort: [[x, y, w, h], confidence, class_name]
     adapted_dets = []
-    for det in detections:
+    det_class_map = {}  # Dizionario per mappare detection a class_id
+    
+    for det_idx, det in enumerate(detections):
         x1, y1, w, h, conf, class_id = det
-        # DeepSort si aspetta: ([x, y, w, h], confidence, class_name)
         adapted_dets.append(([x1, y1, w, h], conf, str(class_id)))
+        # Salva la mappatura tra l'indice della detection e il class_id
+        det_class_map[det_idx] = int(class_id)
 
     tracks = tracker.update_tracks(adapted_dets, frame=frame)
 
     frame_tracks = []
     for track in tracks:
+        # salva solo tracce aggiornate nel frame e confermate
+        if track.time_since_update != 0:
+            continue
         if not track.is_confirmed():
             continue
 
-        track_id = track.track_id
-        x1, y1, x2, y2 = map(int, track.to_ltrb())
+        # valori di detection devono essere presenti se aggiornato
+        det_conf = track.get_det_conf()
+        det_cls = track.get_det_class()
+        if det_conf is None or det_cls is None:
+            continue
 
-        # Disegna il box
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        cv2.putText(frame, f"ID: {track_id}", (x1, y1 - 8),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        ltrb = track.to_ltrb()
+        x1, y1, x2, y2 = map(int, ltrb)
+
+        # clamp ai bordi del frame
+        x1 = max(0, min(x1, W - 1))
+        y1 = max(0, min(y1, H - 1))
+        x2 = max(0, min(x2, W - 1))
+        y2 = max(0, min(y2, H - 1))
+
+        # class id e conf dal frame corrente
+        try:
+            class_id = int(det_cls)
+        except (ValueError, TypeError):
+            continue  # evita valori non validi
+
+        conf = float(det_conf)
+
+        # Disegno bbox + label
+        color = (
+            (37 * (class_id + 1)) % 255,
+            (17 * (class_id + 1)) % 255,
+            (97 * (class_id + 1)) % 255,
+        )
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+
+        label = f"ID {int(track.track_id)} | C {class_id} | {conf:.2f}"
+        (tw, th), bl = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+        y_text = y1 - 8 if y1 - 8 > 10 else y1 + th + 8
+        cv2.rectangle(frame, (x1, y_text - th - 4), (x1 + tw + 4, y_text + 2), color, -1)
+        cv2.putText(frame, label, (x1 + 2, y_text),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
         frame_tracks.append({
-            "id": int(track_id),
-            "bbox": [x1, y1, x2, y2]
+            "id": int(track.track_id),
+            "bbox": [x1, y1, x2, y2],
+            "confidence": conf,
+            "class_id": class_id,
         })
 
     # Scrive nel video e salva i dati
     out.write(frame)
-    all_tracks.append({
-        "frame": frame_id,
-        "tracks": frame_tracks
-    })
+    all_tracks.append({"frame": frame_id, "tracks": frame_tracks})
 
     frame_id += 1
 
