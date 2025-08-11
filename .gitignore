@@ -1,8 +1,10 @@
-tracking_09/
+videos_tracking_09/
 tracking_09_dataset/
+complete_dataset_yolov8/
+tracking09_dataset_plain_yolov8/
 results/
 *.pt
 *.mp4
 frames/
 2d_tracking_results.json
-GroundTruthData/
+GroundTruthData/x
