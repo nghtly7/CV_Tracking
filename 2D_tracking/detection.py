@@ -4,7 +4,7 @@ import os
 import json
 
 # Config
-video_path = "../raw_video/out2.mp4"
+video_path = "./raw_video/out2.mp4"
 model_path = "best.pt"
 video_name = os.path.splitext(os.path.basename(video_path))[0]
 output_dir = "detection"
