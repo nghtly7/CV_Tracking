@@ -5,7 +5,7 @@ import numpy as np
 from collections import defaultdict
 import matplotlib.pyplot as plt
 
-video = "out4"
+video = "out13"
 
 def gt_class_conversion(class_id):
     """
@@ -470,11 +470,12 @@ if __name__ == "__main__":
     # opzionale: autovalidazione IoU
     quick_iou_self_test()
     # Load ground truth data
-    coco_json_path = os.path.join("GroundTruthData", "train", "_annotations.coco.json")
+    coco_json_path = os.path.join("ground_truth_data", "train", "_annotations.coco.json")
     gt_by_frame, images_by_id, categories = load_coco_annotations(coco_json_path)
     
     # Example: Load tracking results (adjust path as needed)
-    tracker_results_path = os.path.join("2D_tracking", "tracked", f"{video}_tracks.json")
+    #tracker_results_path = os.path.join("2D_tracking", "tracked", f"{video}_tracks.json")
+    tracker_results_path =  "2D_tracking/"+"tracked/"+f"{video}"+"_tracks.json"
 
     # Check if tracker results exist
     if os.path.exists(tracker_results_path):

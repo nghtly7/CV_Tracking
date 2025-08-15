@@ -4,11 +4,11 @@ import os
 from deep_sort_realtime.deepsort_tracker import DeepSort
 
 # === CONFIG ===
-video_path = "../raw_video/out13.mp4"
+video_path = "raw_video/out13.mp4"
 video_name = os.path.splitext(os.path.basename(video_path))[0]
-detections_json = f"detection/{video_name}_detections.json"
-output_video_path = f"tracked/{video_name}_tracked.mp4"
-output_tracks_path = f"tracked/{video_name}_tracks.json"
+detections_json = "2D_tracking/"+f"detection/{video_name}_detections.json"
+output_video_path = "2D_tracking/"+f"tracked/{video_name}_tracked.mp4"
+output_tracks_path = "2D_tracking/"+f"tracked/{video_name}_tracks.json"
 
 os.makedirs("tracked", exist_ok=True)
 
@@ -128,5 +128,5 @@ out.release()
 with open(output_tracks_path, "w") as f:
     json.dump(all_tracks, f, indent=2)
 
-print(f"[✓] Video tracciato salvato in: {output_video_path}")
-print(f"[✓] Tracce salvate in: {output_tracks_path}")
+print(f"Tracked video saved in: {output_video_path}")
+print(f"Tracking saved in: {output_tracks_path}")

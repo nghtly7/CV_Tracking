@@ -4,10 +4,10 @@ import os
 import json
 
 # Config
-video_path = "./raw_video/out2.mp4"
-model_path = "best.pt"
+video_path = "raw_video/out13.mp4"
+model_path = "2D_tracking/best.pt"
 video_name = os.path.splitext(os.path.basename(video_path))[0]
-output_dir = "detection"
+output_dir = "2D_tracking/detection"
 output_json = os.path.join(output_dir, f"{video_name}_detections.json")
 output_video = os.path.join(output_dir, f"{video_name}_annotated.mp4")
 conf_threshold = 0.3
@@ -71,5 +71,5 @@ out.release()
 with open(output_json, "w") as f:
     json.dump(all_detections, f, indent=2)
 
-print(f"[✓] Detection salvate in: {output_json}")
-print(f"[✓] Video annotato salvato in: {output_video}")
+print(f"Detection saved in: {output_json}")
+print(f"Video with annotation saved in: {output_video}")
