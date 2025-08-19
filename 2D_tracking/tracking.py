@@ -4,13 +4,13 @@ import os
 from deep_sort_realtime.deepsort_tracker import DeepSort
 
 # === CONFIG ===
-video_path = "../raw_video/out13.mp4"
+video_path = "../rectified_video/out4.mp4"
 video_name = os.path.splitext(os.path.basename(video_path))[0]
-detections_json = f"detection/{video_name}_detections.json"
-output_video_path = f"tracked/{video_name}_tracked.mp4"
-output_tracks_path = f"tracked/{video_name}_tracks.json"
+detections_json = f"rDetection/{video_name}_detections.json"
+output_video_path = f"rTracked/{video_name}_tracked.mp4"
+output_tracks_path = f"rTracked/{video_name}_tracks.json"
 
-os.makedirs("tracked", exist_ok=True)
+os.makedirs("rTracked", exist_ok=True)
 
 # === INIZIALIZZAZIONE ===
 cap = cv2.VideoCapture(video_path)

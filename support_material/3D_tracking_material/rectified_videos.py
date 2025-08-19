@@ -23,61 +23,62 @@ def process_video(video_path, calib_path, output_path):
     fps = cap.get(cv2.CAP_PROP_FPS)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    
 
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
-    
+    if not out.isOpened():
+        print("Error opening VideoWriter for:", output_path)
+        cap.release()
+        return
 
-    grid_x, grid_y = np.meshgrid(np.arange(width), np.arange(height))
-    pts = np.stack([grid_x, grid_y], axis=-1).astype(np.float32)
-    pts = pts.reshape(-1, 1, 2)
-    
+    # Crea le mappe corrette per remap (dest->src)
+    new_mtx, _ = cv2.getOptimalNewCameraMatrix(mtx, dist, (width, height), alpha=0, newImgSize=(width, height))
+    map_x, map_y = cv2.initUndistortRectifyMap(mtx, dist, None, new_mtx, (width, height), cv2.CV_32FC1)
 
-    undistorted_pts = cv2.undistortPoints(pts, mtx, dist, P=mtx)
-    undistorted_map = undistorted_pts.reshape(height, width, 2)
-    map_x = undistorted_map[:, :, 0]
-    map_y = undistorted_map[:, :, 1]
-    
     frame_count = 0
     while True:
         ret, frame = cap.read()
         if not ret:
             break
-        # Apply the undistortion map to the frame
-        rectified_frame = cv2.remap(frame, map_x, map_y, interpolation=cv2.INTER_LINEAR)
+        rectified_frame = cv2.remap(frame, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
         out.write(rectified_frame)
         frame_count += 1
         if frame_count % 50 == 0:
             print(f"Processed {frame_count} frames for {video_path}")
-    
+
     cap.release()
     out.release()
     print(f"Finished processing video: {video_path}")
 
 def main():
-    video_files = glob.glob("out*.mp4") # path to the video files
-    output_dir = "" # folder path where to save the rectified videos
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    
+    script_dir = os.path.dirname(os.path.abspath(__file__))  # base assoluta dello script
+
+    video_dir = os.path.normpath(os.path.join(script_dir, "..", "..", "raw_video"))
+    output_dir = os.path.normpath(os.path.join(script_dir, "..", "..", "rectified_video"))
+
+    video_files = glob.glob(os.path.join(video_dir, "out*.mp4"))
+    if not video_files:
+        print(f"Nessun video trovato in: {video_dir}")
+        return
+
+    os.makedirs(output_dir, exist_ok=True)
+
     for video_path in video_files:
-        
         basename = os.path.basename(video_path)
         match = re.search(r'out(\d+)\.mp4', basename)
         if match:
             cam_index = match.group(1)
-            
-            calib_path = os.path.join("data", "camera_data", f"cam_{cam_index}", "calib", "camera_calib.json")
+            calib_rel_path = os.path.join("camera_data", f"cam_{cam_index}", "calib", "camera_calib.json")
+            calib_path = os.path.join(script_dir, calib_rel_path)  # assoluto
+            if not os.path.exists(calib_path):
+                print(f"File di calibrazione mancante: {calib_path} — skip")
+                continue
         else:
             print("Could not extract camera index from filename:", video_path)
             continue
-        
-        ## Create one folder for each sample e.g. tracking_01, mocap_1, hpe_1
-        output_path = os.path.join(output_dir, '', basename)
-        if not os.path.exists(os.path.join(output_dir, '')):
-            os.makedirs(os.path.join(output_dir, ''))
-            
+
+        output_path = os.path.join(output_dir, basename)
+
         print(f"Processing {video_path} using calibration file {calib_path}...")
         process_video(video_path, calib_path, output_path)
 

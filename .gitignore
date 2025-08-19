@@ -9,5 +9,10 @@ GroundTruthData/
 complete_dataset_yolov8/
 detection/
 tracked/
+rDetection/
+rTracked/
+triangulations/
+dump/
+tracks3d/
 dataset_report.txt
 dataset_analysis.png
