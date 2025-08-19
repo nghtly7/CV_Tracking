@@ -1,0 +1,94 @@
+================================================================================
+3D BASKETBALL GAME TRACKING EVALUATION REPORT TXT
+================================================================================
+
+1. OVERALL TRACKING STATISTICS
+----------------------------------------
+Total frames processed: 600
+Frames with tracks: 599
+Success rate: 99.8%
+Total 3D tracks: 5525
+Average tracks per frame: 9.2
+
+2. TRAJECTORY METRICS
+----------------------------------------
+
+Ball:
+  Average Displacement Error (ADE): 104.6 mm
+  Final Displacement Error (FDE): 0.0 mm
+  Root Mean Square Error (RMSE): 7.8 mm
+  Average Smoothness: 159.3 mm/frame²
+  Number of trajectories: 15
+
+Player:
+  Average Displacement Error (ADE): 2001.1 mm
+  Final Displacement Error (FDE): 0.0 mm
+  Root Mean Square Error (RMSE): 35.6 mm
+  Average Smoothness: 1199.5 mm/frame²
+  Number of trajectories: 37
+
+Referee:
+  Average Displacement Error (ADE): 1596.2 mm
+  Final Displacement Error (FDE): 0.0 mm
+  Root Mean Square Error (RMSE): 26.6 mm
+  Average Smoothness: 181.2 mm/frame²
+  Number of trajectories: 4
+
+3. MULTI-OBJECT TRACKING 3D METRICS
+----------------------------------------
+Estimated MOTA (Multiple Object Tracking Accuracy): 0.934
+Estimated IDF1 (ID F1 Score): 0.534
+Estimated HOTA3D (Higher Order Tracking Accuracy): 0.654
+Identity Switches (IDSW): 24
+Fragmentations (FRAG): 342
+Track Consistency Score: 0.534
+Average Trajectory Length: 117.4 frames
+
+4. REPROJECTION ERROR ANALYSIS
+----------------------------------------
+Overall Statistics:
+  Mean: 137.46 pixels
+  Median: 97.17 pixels
+  Standard Deviation: 172.27 pixels
+  Min: 0.00 pixels
+  Max: 1192.82 pixels
+  75th Percentile: 167.21 pixels
+  95th Percentile: 397.93 pixels
+
+By Object Class:
+  Ball:
+    Mean: 6.15 ± 3.73 pixels
+    Median: 5.50 pixels
+    Count: 51
+  Player:
+    Mean: 119.81 ± 117.84 pixels
+    Median: 97.41 pixels
+    Count: 4294
+  Referee:
+    Mean: 207.36 ± 285.77 pixels
+    Median: 102.30 pixels
+    Count: 1180
+
+By Camera Count:
+  2_cameras:
+    Mean: 79.83 ± 59.24 pixels
+    Count: 4498
+  3_cameras:
+    Mean: 389.85 ± 256.99 pixels
+    Count: 1027
+
+5. QUALITY ASSESSMENT
+----------------------------------------
+Reprojection Quality: Needs Improvement (Mean error: 137.46px)
+Track Consistency: Acceptable (Score: 0.534)
+Frame Success Rate: Excellent (99.8%)
+
+6. RECOMMENDATIONS
+----------------------------------------
+• Consider camera recalibration to reduce reprojection errors
+• Improve track association algorithms for better consistency
+• Ball detection rate is low - consider specialized ball tracking
+
+================================================================================
+Report generated for 3D Tracking Metrics
+================================================================================

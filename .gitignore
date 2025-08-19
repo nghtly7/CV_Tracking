@@ -5,9 +5,10 @@ results/
 *.mp4
 frames/
 2d_tracking_results.json
-GroundTruthData/
+ground_truth_data/
 complete_dataset_yolov8/
 detection/
 tracked/
+3D_tracking/rectified_videos_result/
 dataset_report.txt
 dataset_analysis.png

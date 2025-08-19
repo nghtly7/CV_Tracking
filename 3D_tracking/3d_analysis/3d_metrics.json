@@ -1,0 +1,102 @@
+{
+  "basic_statistics": {
+    "total_frames_processed": 600,
+    "frames_with_tracks": 599,
+    "total_tracks": 5525,
+    "tracks_per_frame": 9.208333333333334,
+    "success_rate": 0.9983333333333333,
+    "class_distribution": {
+      "ball": 51,
+      "player": 4294,
+      "referee": 1180
+    },
+    "trajectories": {
+      "total": 56,
+      "avg_length": 98.66071428571429,
+      "max_length": 598,
+      "min_length": 1
+    }
+  },
+  "trajectory_metrics": {
+    "Ball": {
+      "avg_ade_mm": 104.58800594940551,
+      "avg_fde_mm": 0.0,
+      "avg_rmse_mm": 7.780937267334319,
+      "avg_smoothness": 159.3070190569766,
+      "trajectory_count": 15
+    },
+    "Player": {
+      "avg_ade_mm": 2001.07003050498,
+      "avg_fde_mm": 0.0,
+      "avg_rmse_mm": 35.56717506128668,
+      "avg_smoothness": 1199.4588862691862,
+      "trajectory_count": 37
+    },
+    "Referee": {
+      "avg_ade_mm": 1596.1595607475747,
+      "avg_fde_mm": 0.0,
+      "avg_rmse_mm": 26.592606821249102,
+      "avg_smoothness": 181.23681294021355,
+      "trajectory_count": 4
+    }
+  },
+  "mot3d_metrics": {
+    "estimated_mota": 0.9337556561085973,
+    "estimated_idf1": 0.5338374391227543,
+    "estimated_hota3d": 0.6535058923209518,
+    "id_switches": 24,
+    "fragmentations": 342,
+    "total_tracks": 5525,
+    "track_consistency": {
+      "avg_consistency": 0.5338374391227543,
+      "avg_trajectory_length": 117.36170212765957,
+      "avg_spatial_consistency": 0.13377446711792065,
+      "total_trajectories": 56
+    }
+  },
+  "reprojection_analysis": {
+    "overall": {
+      "mean_px": 137.45844875570813,
+      "median_px": 97.16571173319737,
+      "std_px": 172.273669971442,
+      "min_px": 0.002228214474602168,
+      "max_px": 1192.8223095785922,
+      "q75_px": 167.20913573006965,
+      "q95_px": 397.9261908433378
+    },
+    "by_class": {
+      "Ball": {
+        "mean_px": 6.148108006621541,
+        "median_px": 5.504511923542312,
+        "std_px": 3.7328344263524262,
+        "count": 51
+      },
+      "Player": {
+        "mean_px": 119.80944456685748,
+        "median_px": 97.41200767537114,
+        "std_px": 117.83643182897714,
+        "count": 4294
+      },
+      "Referee": {
+        "mean_px": 207.3581533024268,
+        "median_px": 102.29562146239263,
+        "std_px": 285.7714720031328,
+        "count": 1180
+      }
+    },
+    "by_camera_count": {
+      "2_cameras": {
+        "mean_px": 79.83202866227279,
+        "median_px": 74.31366094298647,
+        "std_px": 59.24432912837533,
+        "count": 4498
+      },
+      "3_cameras": {
+        "mean_px": 389.8475797978425,
+        "median_px": 305.05328318077244,
+        "std_px": 256.9908722778495,
+        "count": 1027
+      }
+    }
+  }
+}
