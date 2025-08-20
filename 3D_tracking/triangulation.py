@@ -1,3 +1,11 @@
+"""
+Triangola punti 3D da osservazioni 2D multi-camera:
+- carica calibrazioni (K,R,t) e osservazioni per camera
+- esegue matching epipolare per coppie di camere (Sampson + costo composito) e clustering multi-vista
+- triangola (DLT), rifinisce con Levenberg-Marquardt e stima la covarianza
+- filtra per errore di riproiezione e salva, per ogni frame, associazioni e triangolazioni in JSON
+"""
+
 import json
 import argparse
 import re
@@ -416,16 +424,21 @@ def _extract_xy(track: dict) -> Tuple[float, float] | None:
         return float(track["center"][0]), float(track["center"][1])
     if "cx" in track and "cy" in track:
         return float(track["cx"]), float(track["cy"])
-    # 3) bbox -> centro (supporta [x,y,w,h] o [x1,y1,x2,y2])
+    # 3) bbox -> usa bottom-center per player/referee, center per altri
     if "bbox" in track and isinstance(track["bbox"], (list, tuple)) and len(track["bbox"]) == 4:
         x, y, w_or_x2, h_or_y2 = track["bbox"]
-        if w_or_x2 > x and h_or_y2 > y and (w_or_x2 - x) > 2 and (h_or_y2 - y) > 2:
-            cx = (x + w_or_x2) * 0.5
-            cy = (y + h_or_y2) * 0.5
+        is_xyxy = (w_or_x2 > x) and (h_or_y2 > y)
+        if is_xyxy:
+            w = float(w_or_x2 - x); h = float(h_or_y2 - y)
         else:
-            cx = x + w_or_x2 * 0.5
-            cy = y + h_or_y2 * 0.5
-        return float(cx), float(cy)
+            w = float(w_or_x2); h = float(h_or_y2)
+        cls = str(track.get("class", track.get("label", track.get("name", "")))).lower()
+        if ("play" in cls or "person" in cls or "human" in cls or "ref" in cls):
+            # bottom-center per punti “a terra”
+            return float(x + 0.5 * w), float(y + h)
+        else:
+            # center per palla/altro
+            return float(x + 0.5 * w), float(y + 0.5 * h)
     return None
 
 def _class_from_id(cid, name: str | None = None) -> str:
@@ -618,11 +631,11 @@ def main():
     ap = argparse.ArgumentParser()
     # Percorsi fissi via globali
     ap.add_argument("--w_epi", type=float, default=1.0)
-    ap.add_argument("--w_2d", type=float, default=0.0)
-    ap.add_argument("--max_cost", type=float, default=0.5)
+    ap.add_argument("--w_2d", type=float, default=0.2)
+    ap.add_argument("--max_cost", type=float, default=0.8)
     ap.add_argument("--max_epi", type=float, default=None)  # gating epipolare opzionale
     ap.add_argument("--sigma_px", type=float, default=1.5)
-    ap.add_argument("--max_reproj_px", type=float, default=3.0)
+    ap.add_argument("--max_reproj_px", type=float, default=7.0)
     # Nuovi flag PnP/rettifica
     ap.add_argument("--pnp_from_field", action="store_true",
                     help="Ristima R,t da img_points.json per ciascuna cam (world=campo)")

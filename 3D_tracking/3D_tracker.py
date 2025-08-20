@@ -1,3 +1,14 @@
+"""
+Costruisce tracce 3D dai punti triangolati:
+- carica i file triangulated_*.json
+- filtra per qualità (n. viste, errore di riproiezione) e deduplica per frame/classe
+  con fusione gaussiana (soglia euclidea + test di Mahalanobis)
+- esegue tracking 3D (Kalman costante velocità per player/referee, balistica per la palla)
+  con associazione basata su distanza di Mahalanobis e gating chi^2
+- gestisce conferma/mancate assegnazioni/terminazione delle tracce
+- esporta snapshot delle tracce confermate in tracks3d.csv e statistiche in stats.json
+"""
+
 import json, csv
 from pathlib import Path
 from typing import List, Dict, Tuple
@@ -39,7 +50,7 @@ R_EIG_MAX = 1.0        # max autovalore (m^2)
 # Miss handling e conferma
 MAX_MISSES_PLAYER = 26   # più persistenza per occlusioni lunghe
 MAX_MISSES_REFEREE = 10
-MAX_MISSES_BALL = 12     # palla più continua
+MAX_MISSES_BALL = 18     # palla più continua
 
 MIN_HITS_CONFIRM_PLAYER = 3
 MIN_HITS_CONFIRM_REFEREE = 3
