@@ -175,3 +175,41 @@ Suggerimenti
 - Controlla che tracked/{video}_tracks.json contenga “frame” e “tracks” con campi “id”, “bbox”, “confidence”, “class_id”
 - Se i frame comuni GT↔tracker sono 0, verifica:
   - la mappatura dei frame
+
+---
+
+## Modulo 3D Tracking (triangolazione, tracking, metriche, viewer, Unreal)
+
+Per dettagli completi vedi: [3D_tracking/README.md](3D_tracking/README.md)
+
+Quickstart (PowerShell)
+- cd c:\Users\nicol\Desktop\CV_Tracking\3D_tracking
+- Triangolazione: python triangulation.py
+- Tracking 3D: python 3D_tracker.py
+- Metriche 3D: python 3dMetrics.py
+
+Predizioni 3D
+- Output: [3D_tracking/tracks3d/tracks3d.csv](3D_tracking/tracks3d/tracks3d.csv)
+- Colonne tipiche: t, track_id, class, x, y, z, vx, vy, vz, meas_err_px (unità metri, Z up)
+
+Visualizzatore 3D
+- Script: [3D_tracking/displayData.py](3D_tracking/displayData.py)
+- Configurazione (variabili globali in testa al file):
+  - CSV_PATH: percorso al CSV (metri)
+  - FPS: fps per la barra tempo
+  - FIELD_SIZE: None oppure (LUNGHEZZA, LARGHEZZA) in metri
+- Esecuzione: python 3D_tracking/displayData.py
+- Tasti: SPACE (play/pausa), ←/→ (frame), ↑/↓ (velocità), Q (esci)
+
+Export per Unreal Engine
+- Script: [3D_tracking/export_unreal_engine.py](3D_tracking/export_unreal_engine.py)
+- Configurazione (variabili globali):
+  - INPUT_CSV: CSV d’ingresso (metri)
+  - OUT_DIR: cartella output
+  - WORLD_ROT_DEG: rotazione antioraria del piano XY (gradi)
+  - WORLD_OFFSET_M: offset (x,y,z) in metri
+  - FPS_TRACKS, CM_PER_M, REBASE_TIME, WRITE_JSONL, SORT_OUTPUT
+- Output:
+  - unreal_tracks.csv (DataTable/Blueprint/Sequencer; include row_name)
+  - unreal_frames.jsonl (1 riga JSON per frame, opzionale)
+- Nota: l’input richiede almeno le colonne t|frame, track_id, class, x|x_m, y|y_m, z

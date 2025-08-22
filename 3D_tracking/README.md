@@ -1,196 +1,193 @@
-# 3D Tracking – Triangolazione, Tracking e Valutazione
+# 3D Tracking – Triangolazione, Tracking, Viewer, Metriche, Export Unreal
 
-Questo modulo realizza una pipeline completa per il tracking 3D di oggetti in un contesto sportivo, a partire da osservazioni 2D multi-camera fino al calcolo delle metriche di valutazione su piano campo.
+Pipeline completa per il tracking 3D in ambito sportivo: dalle osservazioni 2D multi-camera fino a metriche su piano campo, visualizzazione e export per Unreal Engine.
 
-Componenti principali:
-- Triangolazione 3D delle osservazioni 2D multi-vista
-- Costruzione di tracce 3D con filtri/associazioni robusti
-- Valutazione metrica (detection/posizione e opzionale tracking) vs Ground Truth COCO rettificato
-
-Sezioni:
-- Struttura del codice
-- Dati in ingresso e convenzioni
+Contenuti:
+- Struttura cartelle e prerequisiti
+- Dati e convenzioni
 - Pipeline end-to-end
-- Configurazione e parametri chiave
+- Configurazione per script
 - Esecuzione (Quickstart)
-- Output attesi
+- Formati di input/output
 - Suggerimenti e troubleshooting
 
 ---
 
-## Struttura del codice
+## Struttura cartelle e prerequisiti
 
+Struttura tipica della cartella 3D_tracking:
 - triangulation.py
-  - Carica calibrazioni (K, R, t) e osservazioni 2D per camera.
-  - Effettua matching epipolare (distanza di Sampson + costi compositi), clustering multi-vista.
-  - Triangola (DLT), rifinisce con Levenberg–Marquardt, stima covarianza.
-  - Filtra per errore di riproiezione / n. viste e salva per frame:
-    - triangulations/associations_*.json e/o triangulated_*.json.
 - 3D_tracker.py
-  - Carica i punti triangolati (triangulated_*.json).
-  - Filtra qualità e deduplica per frame/classe (fusione gaussiana con soglie euclidee + test di Mahalanobis).
-  - Tracker 3D:
-    - Modello CV (costante velocità) per player/referee.
-    - Modello balistico per palla (gravità, accelerazione più rumorosa).
-  - Associazione per distanza di Mahalanobis con gating chi^2.
-  - Gestione conferma/assenza/terminazione tracce.
-  - Esporta snapshot: tracks3d/tracks3d.csv e tracks3d/stats.json.
 - 3dMetrics.py
-  - Carica predizioni 3D (CSV) e GT COCO rettificato.
-  - Carica calibrazioni e costruisce omografie per proiettare GT a terra (piano z=0).
-  - Allinea temporalmente GT → timeline predizioni (FRAME_SCALE/OFFSET).
-  - Proietta GT (pixel → campo) e deduplica cross-camera per classe.
-  - Post-processing pred (opzionale): stitching, filtro lunghezza minima, filtro velocità “two-strike”, smoothing zero-lag, NMS metrico framewise.
-  - Matching GT↔Pred per-classe (Hungarian con gate metrico).
-  - Metriche:
-    - Detection: Precision/Recall/F1 a varie soglie (metri).
-    - Posizione: MAE/RMSE/percentili delle distanze sul piano campo.
-    - Tracking (opzionale): CLEAR-MOT e IDF1 sul piano campo.
-  - Stampa tabelle e salva metrics_summary.json.
+- displayData.py
+- export_unreal_engine.py
+- tracks3d/
+  - tracks3d.csv
+  - stats.json
+- triangulations/
+  - associations_#.json, triangulated_#.json (per frame)
+- unreal/
+  - unreal_tracks.csv, unreal_frames.jsonl (output export Unreal)
 
-Nota: Alcune funzioni nei file possono essere placeholder/in completamento; il flusso descritto rappresenta il comportamento previsto.
+Requisiti (consigliato Python 3.10+):
+- numpy, pandas, matplotlib, scipy, opencv-python (per triangolazione/utility)
+
+Installazione rapida (PowerShell):
+- pip install numpy pandas matplotlib scipy opencv-python
 
 ---
 
-## Dati in ingresso e convenzioni
+## Dati e convenzioni
 
-- Calibrazioni: support_material/3D_tracking_material/camera_data/cam_*/calib/camera_calib.json
-  - Intrinseche K, rotazione R, traslazione t (unità m; conversione mm→m opzionale).
-  - Se disponibili intrinseche rettificate (K_rect/Knew), vengono preferite.
-- Osservazioni 2D: 2D_tracking/rTracked (outX_tracks.json o simili)
-  - Coordinate in immagini rettificate (coerenti con COCO rettificato).
-- Ground Truth (GT): GroundTruthData/train/_annotations_rectified.coco.json
-  - Bbox su immagini rettificate. Per player/referee si usa il bottom-center (punto a terra); per ball il centro bbox.
-  - Mappatura classi normalizzata: 0=ball, 1=player, 2=referee.
-- Predizioni 3D: 3D_tracking/tracks3d/tracks3d.csv
-  - Colonne tipiche: t, track_id, class, x, y, z (metri, piano campo su xy).
-
-Convenzioni:
-- Camera ID normalizzati: outN → cam_N.
-- Piano campo: proiezione tramite omografia H = K [r1 r2 t] assumendo z=0.
-- Allineamento temporale GT → pred: t_pred = FRAME_OFFSET + FRAME_SCALE * f_gt (es. 5x per 25fps vs 5fps).
+- Spazio 3D:
+  - Unità: metri
+  - Z up; XY sul piano campo
+- Classi:
+  - Canoniche: player, referee, ball
+  - Mapping supportato anche da ID: 1→player, 2→referee, 0→ball
+- CSV di predizioni 3D (tracks3d.csv):
+  - Colonne tipiche: t, track_id, class, x, y, z, vx, vy, vz, meas_err_px
+  - Sono accettati alias per colonne (t|frame, x|x_m, …) negli script che lo prevedono
 
 ---
 
 ## Pipeline end-to-end
 
 1) Triangolazione (triangulation.py)
-- Carica K, R, t per ciascuna camera; opzionale rettifica intrinseche.
-- Matching epipolare tra coppie di camere con distanza di Sampson e costo combinato (classe, scala bbox, ecc. se previsto).
-- Clustering multi-vista delle corrispondenze.
-- Triangolazione DLT → refine nonlineare (LM) minimizzando l’errore di riproiezione.
-- Stima covarianza del punto 3D.
-- Filtri: errore di riproiezione, n. viste minime; salva JSON per frame.
+- Carica calibrazioni (K, R, t) e osservazioni 2D rettificate
+- Matching epipolare e clustering multi-vista
+- Triangolazione (DLT) + refine nonlineare (LM) + stima covarianza
+- Filtri: errore di riproiezione, n. viste minime
+- Output per frame in triangulations/
 
 2) Tracking 3D (3D_tracker.py)
-- Carica triangulated_*.json e applica filtri qualità + dedup per classe.
-- Tracking:
-  - Player/referee: Kalman CV con rumore di accelerazione moderato.
-  - Ball: modello balistico con gravità e rumore accelerazione maggiore.
-- Associazione: distanza di Mahalanobis, gating chi^2 (dof=3).
-- Gestione tracce: conferma dopo N hit, persistenza a miss (MAX_MISSES_*), terminazione.
-- Output: tracks3d.csv con snapshot per frame + stats.json.
+- Filtra e deduplica triangolazioni
+- Modello CV per player/referee; modello balistico per ball
+- Associazione con distanza di Mahalanobis e gating chi^2
+- Gestione conferma/assenza/terminazione tracce
+- Output snapshot: tracks3d/tracks3d.csv e stats.json
 
-3) Valutazione (3dMetrics.py)
-- Carica predizioni e GT, ricava dimensioni immagine per camera dal COCO.
-- Calibrazioni + omografie H per proiettare GT da pixel a metri (xy campo).
-- Allinea GT ai frame pred (FRAME_SCALE/OFFSET), filtra ai frame sovrapposti.
-- Dedup GT cross-camera per frame e classe con raggio per-classe.
-- Post-processing pred (opzionale):
-  - Stitching di tracce vicine nel tempo/spazio coerenti in direzione/velocità, senza overlap.
-  - Filtro di lunghezza minima.
-  - Filtro velocità “two-strike” (due step consecutivi oltre soglia per rimuovere outlier).
-  - Smoothing zero-lag (media mobile centrata) per ridurre jitter senza ritardo.
-  - NMS metrico per frame/classe per ridurre duplicati vicini (raggio per-classe).
-- Matching Hungarian per classe con gate metrico; calcolo:
-  - Detection @ soglie in metri: TP/FP/FN → Precision/Recall/F1.
-  - Posizione: distanze dei match → MAE/RMSE/percentili.
-  - Tracking (opzionale): CLEAR-MOT, IDF1 (se abilitato e implementato).
-- Stampa riepilogo e salva metrics_summary.json.
+3) Visualizzatore 3D (displayData.py)
+- Riproduzione frame-by-frame con controlli tastiera
+- Disegno campo (bounding box dati o dimensioni preimpostate)
+- Frecce direzione (yaw) opzionali per player/referee
+
+4) Metriche 3D (3dMetrics.py)
+- Proiezione GT su piano campo via omografie
+- Allineamento temporale GT→pred (FRAME_SCALE/OFFSET)
+- Dedup GT e post-processing pred opzionali
+- Matching metrico e calcolo metriche (detection/posizione, tracking opzionale)
+
+5) Export per Unreal Engine (export_unreal_engine.py)
+- Conversione metri→centimetri, rotazione/offset mondo, stima yaw
+- CSV per DataTable/Blueprint/Sequencer + JSONL per frame
 
 ---
 
-## Configurazione e parametri chiave
+## Configurazione per script
 
-- triangulation.py
-  - CALIB_ROOT, OBSERVATIONS_PATH, OUT_DIR
-  - Filtri: MIN_VIEWS, soglie errore riproiezione
-- 3D_tracker.py
-  - MAX_REPROJ_PX_*, MIN_VIEWS, DEDUP_THRESH_* (m)
-  - Gating: CHI2_GATE_3D, CHI2_MERGE_3D
-  - Modelli/rumori: ACCEL_NOISE_*, GRAVITY, FPS
-  - Miss/confirm: MAX_MISSES_*, MIN_HITS_CONFIRM_*
-- 3dMetrics.py
-  - FRAME_SCALE, FRAME_OFFSET
-  - MATCH_GATE_M, MATCH_GATE_BY_CLASS
-  - GT_MERGE_RADIUS_M, MERGE_RADIUS_BY_CLASS
-  - Post-processing: ENABLE_* (stitch/speed/smooth/NMS), relativi parametri
-  - ENABLE_TRACKING_METRICS, LINK_GATE_BY_CLASS, LINK_MAX_FRAME_GAP
-  - Percorsi: TRACKS3D_CSV, COCO_GT_PATH, CAMERA_DATA, OUT_JSON
+Triangolazione (triangulation.py)
+- Percorsi calibrazioni e osservazioni
+- Soglie per errore di riproiezione, min views
 
-Suggerimento: versionare i parametri con il JSON di output per tracciabilità.
+Tracking 3D (3D_tracker.py)
+- Parametri modello (rumori, gravità), gating chi^2
+- Soglie dedup e gestione conferme/miss
+- FPS
+
+Viewer 3D (displayData.py)
+- CSV_PATH: percorso al CSV (metri, Z up)
+- FPS: fps per barra tempo
+- FIELD_SIZE: None oppure (LUNGHEZZA, LARGHEZZA) in metri
+
+Metriche 3D (3dMetrics.py)
+- TRACKS3D_CSV, COCO_GT_PATH, CAMERA_DATA
+- FRAME_SCALE, FRAME_OFFSET
+- Gating e soglie per matching e dedup GT
+- Abilitazione post-processing (stitch/speed/smooth/NMS) e tracking metrics
+
+Export Unreal (export_unreal_engine.py)
+- INPUT_CSV: CSV d’ingresso (metri)
+- OUT_DIR: cartella output (es. 3D_tracking/unreal)
+- FPS_TRACKS: fps delle tracce (per time_s)
+- CM_PER_M: 100.0 (UE usa cm)
+- WORLD_ROT_DEG: rotazione antioraria piano XY (gradi)
+- WORLD_OFFSET_M: (x, y, z) in metri
+- REBASE_TIME: se True, time_s parte da min(t)
+- WRITE_JSONL, SORT_OUTPUT
 
 ---
 
 ## Esecuzione (Quickstart)
 
-Prerequisiti:
-- Python 3.10+ (consigliato), Windows
-- pacchetti: numpy, pandas, opencv-python, scipy
+PowerShell (Windows):
+- cd c:\Users\nicol\Desktop\CV_Tracking\3D_tracking
 
-Installazione pacchetti:
-```powershell
-pip install numpy pandas opencv-python scipy
-```
+Triangolazione:
+- python triangulation.py
 
-1) Triangolazione
-```powershell
-cd c:\Users\nicol\Desktop\CV_Tracking\3D_tracking
-python triangulation.py
-```
+Tracking 3D:
+- python 3D_tracker.py
 
-2) Tracking 3D
-```powershell
-python 3D_tracker.py
-```
+Visualizzatore:
+- python displayData.py
+- Tasti: SPACE (play/pausa), ←/→ (frame), ↑/↓ (velocità), Q (esci)
 
-3) Valutazione
-```powershell
-python 3dMetrics.py
-```
+Metriche:
+- python 3dMetrics.py
 
-Note:
-- Verificare FRAME_SCALE/OFFSET in 3dMetrics.py in base agli FPS effettivi GT/pred.
-- Assicurarsi che le calibrazioni contengano K, R, t coerenti con le immagini rettificate del GT.
+Export Unreal:
+- python export_unreal_engine.py
+- Output in: 3D_tracking/unreal
 
 ---
 
-## Output attesi
+## Formati di input/output
 
-- triangulations/
-  - associations_#.json, triangulated_#.json: cluster, triangolazioni, errori di riproiezione, covarianze.
-- tracks3d/
-  - tracks3d.csv: t, track_id, class, x, y, z, … (metri)
-  - stats.json: statistiche tracce (durata, miss, conferme).
-- metrics_summary.json
-  - Parametri usati, metriche detection per soglia, metriche di posizione overall e per classe, frames valutati.
+Predizioni 3D (tracks3d/tracks3d.csv)
+- t (int), track_id (int), class (str|int), x, y, z (float, metri)
+- Opzionali: vx, vy, vz, meas_err_px
+
+Export Unreal
+- unreal_tracks.csv (centimetri, Z up)
+  - row_name: "{class}_{track_id}_{frame}"
+  - track_id, class, frame, time_s, x_cm, y_cm, z_cm, yaw_deg
+- unreal_frames.jsonl (opzionale, 1 riga per frame)
+  - Per frame t: { "frame": t, "time_s": ..., "objects": [ { "id", "class", "x", "y", "z", "yaw" }, ... ] }
+
+Viewer 3D
+- Legge tracks3d.csv (alias colonne supportati)
+- Disegna 3 scatter per classi + quiver per direzione
+
+Metriche (3dMetrics.py)
+- metrics_summary.json con metrica detection (per soglie), posizione (MAE/RMSE/percentili), tracking opzionale (CLEAR-MOT/IDF1)
 
 ---
 
 ## Suggerimenti e troubleshooting
 
-- Calibrazioni (unità t):
-  - Se t è in mm, abilitare ASSUME_T_MM=True (o conversione automatica in base alla norma).
-- Omografie H e proiezione:
-  - Se l’inversione H fallisce/instabile, verificare K rettificata e dimensioni immagine; usare DEFAULT_IMG_SIZE come fallback.
-- Allineamento temporale:
-  - Se “No aligned frames”, controllare FRAME_SCALE/OFFSET e che i frame pred siano presenti in tracks3d.csv.
-- Gating Hungarian:
-  - Se F1 è troppo basso nonostante buona qualità, aumentare MATCH_GATE_BY_CLASS o le soglie PREC_THRESH_M.
-- Deduplicazione GT:
-  - Adattare MERGE_RADIUS_BY_CLASS per scenari con soggetti densi/affollati.
-- Post-processing:
-  - Disattivare temporaneamente ENABLE_* per isolare l’impatto di ciascun filtro/stage.
+- Colonne/alias:
+  - Gli script accettano alias per t|frame, track_id|id, class|label|category, x|x_m, y|y_m, z|z_m
+- Classi:
+  - Accetta sia nomi che ID; mapping interno normalizza a player/referee/ball
+- Yaw:
+  - Calcolato dalla direzione nel piano XY in world space; se oggetto fermo → yaw=0
+- Unreal:
+  - Impostare WORLD_ROT_DEG/WORLD_OFFSET_M per allineare coordinate a livello mappa UE
+  - UE usa centimetri; output già convertito
+- Visualizzatore:
+  - Se non si specifica FIELD_SIZE, usa il bounding box XY dei dati
+- Allineamento metriche:
+  - FRAME_SCALE/OFFSET devono riflettere il rapporto FPS GT↔pred (es. GT 5 fps vs pred 25fps)
+- Troubleshooting:
+  - Errori comuni includono:
+    - FRAME_SCALE/OFFSET errati → allineamento temporale sbagliato
+    - Calibrazioni incoerenti → triangolazione/associazione errata
+    - Parametri di gating troppo stretti → tracce mancanti o frammentate
+    - Alias colonne non riconosciuti → errore lettura CSV
+  - Controllare i log di output per messaggi di errore o avviso
+  - Verificare visivamente i risultati con il visualizzatore 3D
+  - Eseguire il debug passo-passo per isolare problemi in specifici script o funzioni
 
 ---
 
