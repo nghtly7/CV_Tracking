@@ -102,7 +102,9 @@ Before you start
 - Put your raw videos in raw_video/.
 - If needed for 3D, generate rectified videos in rectified_video/ using support_material/3D_tracking_material/rectified_videos.py.
 - Open each script you will run and set the CONFIG section (paths, FPS, etc.).
-
+```
+cd 2D_tracking
+```
 2D pipeline (per video)
 1) Detections
 - Edit 2D_tracking/detection.py (video_path, model_path)
@@ -125,7 +127,9 @@ Details: see 2D_tracking/README.md
 Prerequisites
 - Per-camera detections/tracks rectified to field space in 2D_tracking/rDetection and 2D_tracking/rTracked.
 - Camera intrinsics/extrinsics in support_material/3D_tracking_material/camera_data.
-
+```
+cd 3D_tracking
+```
 Steps
 1) Triangulation
 - Edit 3D_tracking/triangulation.py (camera params, inputs)
