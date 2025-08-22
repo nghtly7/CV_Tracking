@@ -1,25 +1,25 @@
-# 2D Tracking – Detection, Tracking, Metriche
+# 2D Tracking – Detection, Tracking, Metrics
 
-Pipeline 2D per video di calcio basata su YOLO per la detection e Deep SORT per il tracking. Include metriche di valutazione, utility per estrarre frame e per verificare il corretto allineamento temporale.
+2D pipeline for football videos based on YOLO for detection and Deep SORT for tracking. Includes evaluation metrics, utilities to extract frames, and checks to verify temporal alignment.
 
-Contenuti:
-- Requisiti e installazione
-- Struttura cartelle
-- Formati di input/output
-- Configurazione degli script
-- Esecuzione (Quickstart)
-- Utility
-- Suggerimenti e troubleshooting
+Contents:
+- Requirements and installation
+- Folder structure
+- Input/output formats
+- Script configuration
+- Execution (Quickstart)
+- Utilities
+- Tips and troubleshooting
 
 ---
 
-## Requisiti e installazione
+## Requirements and installation
 
-Prerequisiti:
+Prerequisites:
 - Python 3.10+
-- GPU opzionale (CUDA) per inferenza più veloce
+- Optional GPU (CUDA) for faster inference
 
-Pacchetti:
+Packages:
 - ultralytics
 - opencv-python
 - deep_sort_realtime
@@ -28,60 +28,60 @@ Pacchetti:
 - matplotlib
 - motmetrics
 
-Installazione rapida (PowerShell):
+Quick install (PowerShell):
 - python -m venv .venv
 - .\.venv\Scripts\Activate.ps1
 - pip install ultralytics opencv-python deep_sort_realtime numpy pandas matplotlib motmetrics
 
 ---
 
-## Struttura cartelle
+## Folder structure
 
 - detection.py
 - tracking.py
 - metrics.py
 - checkFramesCoordination.py
 - getVideoFrames.py
-- best.pt, best_small.pt           (pesi YOLO)
-- detection/                        (output detection)
+- best.pt, best_small.pt           (YOLO weights)
+- detection/                        (detection outputs)
   - outX_detections.json
   - outX_annotated.mp4
-- tracked/                          (output tracking)
+- tracked/                          (tracking outputs)
   - outX_tracks.json
   - outX_tracked.mp4
-- rDetection/, rTracked/            (cartelle di output per dati rettificati, necessari per il tracking 3d, stessi formati di detection/ e tracked/)
+- rDetection/, rTracked/            (outputs of rectified data for 3D tracking; same formats as detection/ and tracked/)
 
-Note:
-- I video di input sono esterni a questa cartella (es. ../raw_video/outX.mp4).
+Notes:
+- Input videos are stored outside this folder (e.g., ../raw_video/outX.mp4).
 
 ---
 
-## Formati di input/output
+## Input/output formats
 
 Input video:
-- File video (es. raw_video/out4.mp4)
+- Video file (e.g., raw_video/out4.mp4)
 
 Detection (detection/outX_detections.json):
 - Per frame:
   - "frame": int
-  - "detections": lista di [x, y, w, h, conf, class_id] in pixel (XYWH)
+  - "detections": list of [x, y, w, h, conf, class_id] in pixels (XYWH)
 - Annotated video: detection/outX_annotated.mp4
 
 Tracking (tracked/outX_tracks.json):
 - Per frame:
   - "frame": int
-  - "tracks": lista di oggetti:
+  - "tracks": list of objects:
     - "id": int
-    - "bbox": [x1, y1, x2, y2] in pixel (XYXY)
+    - "bbox": [x1, y1, x2, y2] in pixels (XYXY)
     - "confidence": float
     - "class_id": int
-- Video con ID: tracked/outX_tracked.mp4
+- Video with IDs: tracked/outX_tracked.mp4
 
-Metriche (metrics.py):
-- Report a console e/o salvataggi CSV/JSON (vedi script)
-- Metri che tipiche: MOTA, MOTP (IoU medio), Precision, Recall, F1, ID Switches, FP, FN, Matches
+Metrics (metrics.py):
+- Console report and/or CSV/JSON dumps (see script)
+- Typical metrics: MOTA, MOTP (mean IoU), Precision, Recall, F1, ID Switches, FP, FN, Matches
 
-Esempi (schematici):
+Examples (schematic):
 
 Detection JSON (per frame):
 ```
@@ -107,105 +107,104 @@ Tracking JSON (per frame):
 
 ---
 
-## Configurazione degli script
+## Script configuration
 
 Detection (detection.py):
-- video_path: percorso al video sorgente (es. "raw_video/out4.mp4")
-- model_path: pesi YOLO (es. "best.pt" o "best_small.pt")
-- conf/thres, device, img_size (se previsti nello script)
-- output dir: detection/ (predefinita)
+- video_path: source video path (e.g., "raw_video/out4.mp4")
+- model_path: YOLO weights (e.g., "best.pt" or "best_small.pt")
+- conf/thres, device, img_size (if exposed by the script)
+- output dir: detection/ (default)
 
 Tracking (tracking.py):
-- video_path: stesso video usato in detection
-- carica automaticamente detection corrispondenti da detection/
-- parametri Deep SORT (n_init, max_age, max_cosine_distance, nn_budget, ecc.) se esposti
+- video_path: same video used in detection
+- automatically loads matching detections from detection/
+- Deep SORT params (n_init, max_age, max_cosine_distance, nn_budget, etc.) if exposed
 - output dir: tracked/
 
-Metriche (metrics.py):
-- video: nome base del video (es. "out4")
-- percorsi file tracker/detection se configurabili
-- opzioni di valutazione (range frame, soglie IoU, classi)
+Metrics (metrics.py):
+- video: base video name (e.g., "out4")
+- tracker/detection file paths if configurable
+- evaluation options (frame range, IoU thresholds, classes)
 
-Utility:
-- checkFramesCoordination.py: parametri per sorgenti (video/detections/tracks) da verificare
-- getVideoFrames.py: input video, cartella output, stride/frame range
+Utilities:
+- checkFramesCoordination.py: parameters for sources (video/detections/tracks) to verify
+- getVideoFrames.py: input video, output folder, stride/frame range
 
-Apri ogni script e imposta le VARIABILI GLOBALI all’inizio del file.
+Open each script and set the GLOBAL VARIABLES at the top of the file.
 
 ---
 
-## Esecuzione (Quickstart)
+## Execution (Quickstart)
 
 PowerShell (Windows):
 - cd c:\Users\nicol\Desktop\CV_Tracking\2D_tracking
 
 1) Detection
-- Modifica in detection.py:
+- Edit detection.py:
   - video_path = "../raw_video/out4.mp4"
   - model_path = "best.pt"
-- Esegui:
+- Run:
   - python detection.py
 - Output:
   - detection/out4_detections.json
   - detection/out4_annotated.mp4
 
 2) Tracking
-- Modifica in tracking.py:
+- Edit tracking.py:
   - video_path = "../raw_video/out4.mp4"
-- Esegui:
+- Run:
   - python tracking.py
 - Output:
   - tracked/out4_tracks.json
   - tracked/out4_tracked.mp4
 
-3) Metriche
-- Modifica in metrics.py:
+3) Metrics
+- Edit metrics.py:
   - video = "out4"
-- Esegui:
+- Run:
   - python metrics.py
 
 ---
 
-## Utility
+## Utilities
 
-Estrazione frame dal video:
+Extract frames from a video:
 - python getVideoFrames.py
-- Imposta input video, cartella frames e intervallo/stride nello script
+- Set input video, frames folder, and interval/stride in the script
 
-Verifica coordinazione frame (GT/detections/tracks):
+Verify frame coordination (GT/detections/tracks):
 - python checkFramesCoordination.py
-- Utile per assicurarci che gli indici di frame e i tempi siano coerenti
+- Useful to ensure frame indices and timestamps are consistent
 
 ---
 
-## Suggerimenti e troubleshooting
+## Tips and troubleshooting
 
-- Modelli YOLO:
-  - best_small.pt per hardware più modesto o inferenza rapida
-  - best.pt per accuratezza maggiore
-- Classi:
-  - Verifica la mappatura class_id nello script (es. 0=ball, 1=player, 2=referee) e i colori impostati
-- Formati bbox:
+- YOLO models:
+  - best_small.pt for modest hardware or faster inference
+  - best.pt for higher accuracy
+- Classes:
+  - Check class_id mapping in the script (e.g., 0=ball, 1=player, 2=referee) and drawing colors
+- Bbox formats:
   - Detection: XYWH
   - Tracking: XYXY
-  - Evita confusioni quando calcoli IoU o quando disegni
-- Frame vuoti a inizio tracking:
-  - Spesso dovuti a warm-up del tracker; usa n_init=1 per ridurlo (se non già impostato)
-- Sincronizzazione:
-  - Se i frame comuni GT↔tracker sono 0, controlla la mappatura o gli offset di frame
+  - Avoid mixing them when computing IoU or drawing
+- Empty frames at tracking start:
+  - Often due to tracker warm-up; use n_init=1 to reduce (if not already set)
+- Synchronization:
+  - If common frames GT↔tracker are 0, check mapping or frame offsets
 - Performance:
-  - Usa --device 0 (se previsto) o imposta device="cuda" nello script per GPU
-- Versioni librerie:
-  - Se ultralytics cambia API, verifica le chiamate a YOLO(model).predict
-- Output rDetection/rTracked:
-  - Cartelle per run alternativi/rapidi o di riferimento; condividono lo stesso formato dei file in detection/ e tracked/
+  - Use --device 0 (if supported) or set device="cuda" in the script for GPU
+- Library versions:
+  - If ultralytics changes API, verify YOLO(model).predict calls
+- rDetection/rTracked outputs:
+  - Folders for rectified/alternative runs; same file formats as detection/ and tracked/
 
 ---
 
-## Comandi rapidi
+## Quick commands
 
 - python detection.py
 - python tracking.py
 - python metrics.py
 - python getVideoFrames.py
--

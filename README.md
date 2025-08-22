@@ -1,215 +1,178 @@
-# CV_Tracking
+# CV_Tracking – Project overview, structure and quickstart
 
-Questo progetto esegue Detection, Tracking e Valutazione delle metriche su video di calcio, con pipeline basata su YOLO e Deep SORT.
+Repository for 2D and 3D tracking on football videos. It includes:
+- 2D detection and tracking (YOLO + Deep SORT)
+- 3D triangulation and tracking from multi-view 2D inputs
+- Visualization, metrics, and Unreal Engine export
 
-- Detection: [detection.py](detection.py)
-- Tracking: [tracking.py](tracking.py)
-- Valutazione (pipeline COCO): [metrics.py](metrics.py)
-- Valutazione (pipeline MOT basata su YOLO labels): [metricsEvaluation.py](metricsEvaluation.py)
-
-Requisiti principali:
-- Python 3.10+
-- pacchetti: ultralytics, opencv-python, deep_sort_realtime, numpy, matplotlib, motmetrics, pandas
-
-Installazione rapida (PowerShell):
-- python -m venv .venv
-- .\.venv\Scripts\Activate.ps1
-- pip install ultralytics opencv-python deep_sort_realtime numpy matplotlib motmetrics pandas
-
-Struttura gerarchica cartelle
-- raw_video/
-  - out2.mp4
-  - out4.mp4
-  - out13.mp4
-- detection/
-  - outX_detections.json         (output di [detection.py](detection.py))
-  - outX_annotated.mp4           (video con bbox di detection)
-- tracked/
-  - outX_tracks.json             (output di [tracking.py](tracking.py))
-  - outX_tracked.mp4             (video con bbox e ID di tracking)
-- GroundTruthData/
-  - train/
-    - _annotations.coco.json     (COCO GT per [metrics.py](metrics.py))
-  - labels/                      (annotazioni YOLO txt per [metricsEvaluation.py](metricsEvaluation.py))
-- datasetManipulation/
-  - labelCorrection.py
-  - datasetStats.py
-- support_material/
-- script principali a radice repo:
-  - detection.py, tracking.py, metrics.py, metricsEvaluation.py, README.md
-
-Formati dati
-- Detection (detection/outX_detections.json)
-  - Per frame: "detections": [x, y, w, h, conf, class_id] (XYWH, pixel)
-- Tracking (tracked/outX_tracks.json)
-  - Per frame:
-    {
-      "frame": int,
-      "tracks": [
-        { "id": int, "bbox": [x1,y1,x2,y2], "confidence": float, "class_id": int }
-      ]
-    }
-- Ground Truth COCO (GroundTruthData/train/_annotations.coco.json)
-  - bbox in [x, y, w, h] (convertiti a XYXY in [metrics.py](metrics.py))
-
-Pipeline 1: Detection → Tracking → Metriche (COCO)
-
-1) Detection
-- Configura in [detection.py](detection.py):
-  - video_path = "raw_video/out4.mp4"
-  - model_path = "best.pt"
-- Output:
-  - detection/out4_detections.json
-  - detection/out4_annotated.mp4
-- Esecuzione:
-  - python detection.py
-
-2) Tracking
-- Configura in [tracking.py](tracking.py):
-  - video_path = "raw_video/out4.mp4"
-  - Carica automaticamente detection/dello stesso video
-- Caratteristiche:
-  - Deep SORT con n_init=1
-  - Salva solo tracce aggiornate nel frame e confermate (niente valori nulli)
-  - Colori bbox: classe 0=verde, classe 1=azzurro (cyan), classe 2=rosso
-- Output:
-  - tracked/out4_tracks.json
-  - tracked/out4_tracked.mp4
-- Esecuzione:
-  - python tracking.py
-
-3) Metriche (COCO)
-- Configura il video target in [metrics.py](metrics.py):
-  - video = "out4"
-- Ground Truth:
-  - [GroundTruthData/train/_annotations.coco.json](GroundTruthData/train/_annotations.coco.json)
-  - La funzione load_coco_annotations filtra per ‘video’ e converte bbox a XYXY
-  - Mappatura temporale: GT è a 5 fps, tracking a 25 fps
-    - GT n → tracker (-2 + 5*n): 1→3, 2→8, 3→13, ...
-- Il tracker viene caricato da tracked/{video}_tracks.json
-- Metriche calcolate in evaluate_tracking:
-  - MOTA, MOTP (IoU medio), Precision, Recall, F1, ID_Switches, Fragments, FP, FN, Matches
-- Esecuzione:
-  - python metrics.py
-
-Pipeline 2 (alternativa): Valutazione con motmetrics (YOLO labels)
-- Usa [metricsEvaluation.py](metricsEvaluation.py) con etichette YOLO (txt)
-- Config da impostare in testa al file:
-  - GROUND_TRUTH_LABELS_FOLDER = 'GroundTruthData/labels'
-  - TRACKING_RESULTS_FILE = '2d_tracking_results.json'
-  - ANGLE_TO_EVALUATE = 'out4'
-  - IMAGE_WIDTH, IMAGE_HEIGHT
-- Esecuzione:
-  - python metricsEvaluation.py
-- Output:
-  - Riepilogo standard MOTChallenge con motmetrics
-
-Come usare un video diverso
-
-Caso A — Pipeline COCO (detection/tracking/metriche):
-- [detection.py](detection.py):
-  - video_path = "raw_video/out13.mp4"
-- [tracking.py](tracking.py):
-  - video_path = "raw_video/out13.mp4"
-- [metrics.py](metrics.py):
-  - video = "out13"
-  - Assicurati che il COCO contenga immagini per quel video con un filename parsabile (pattern primario r'([^_]+)_frame_(\d+)_')
-- Verifica file:
-  - detection/out13_detections.json
-  - tracked/out13_tracks.json
-
-Caso B — Pipeline YOLO labels (motmetrics):
-- [metricsEvaluation.py](metricsEvaluation.py):
-  - ANGLE_TO_EVALUATE = 'out13'
-  - GROUND_TRUTH_LABELS_FOLDER, TRACKING_RESULTS_FILE, IMAGE_WIDTH/HEIGHT coerenti
-
-Note utili e debug
-- Formati bbox:
-  - Detection: [x,y,w,h,conf,class_id] (XYWH, pixel)
-  - Tracking: [x1,y1,x2,y2] (XYXY, pixel)
-  - COCO GT: [x,y,w,h] → XYXY in load_coco_annotations
-- Perché i primi frame del tracking possono risultare vuoti:
-  - Salviamo solo tracce aggiornate e confermate nel frame (track.is_confirmed() e time_since_update==0). Con n_init=1 si riduce il warm-up
-- IoU:
-  - In [metrics.py](metrics.py) sono disponibili quick_iou_self_test() e debug_ious(...) per controlli rapidi
-- Conversione classi GT:
-  - gt_class_conversion: 1→0, 6/7→2, altrimenti→1
-- Allineamento temporale GT ↔ Tracker:
-  - GT n → tracker (-2 + 5*n): 1→3, 2→8, 3→13, ...
-- ID Switch e Fragments:
-  - ID switch conteggiati usando ID tracker "id" e identità GT costruite via linking IoU
-  - Fragments = numero segmenti di match per traccia GT − 1
-
-Modifiche recenti (changelog)
-- [tracking.py](tracking.py)
-  - Salvataggio solo di tracce aggiornate e confermate nel frame (evita confidenze/classi nulle)
-  - Colori bbox fissi: 0=verde, 1=azzurro, 2=rosso
-  - Fix disegno etichetta (rettangolo sfondo con pt2 corretto)
-  - Output JSON per track: { "id", "bbox" [x1,y1,x2,y2], "confidence", "class_id" }
-- [metrics.py](metrics.py)
-  - load_tracker_results legge il campo "id" del tracker come obj_id
-  - load_coco_annotations filtra per variabile video e mappa frame GT → tracker con formula (-2 + 5*n)
-  - gt_class_conversion: 1→0, 6/7→2, altrimenti→1
-  - build_gt_tracks: costruzione identità GT consistenti nel tempo via linking IoU
-  - evaluate_tracking:
-    - ID Switch senza vincolo di frame consecutivi (adatto a GT sottocampionato)
-    - Fragments calcolati come segmenti di match per GT − 1
-  - Utility: quick_iou_self_test e debug_ious per validare IoU
-- [README.md](README.md)
-  - Aggiornata gerarchia cartelle e istruzioni per cambiare video
-  - Chiarito formato dei file di detection/tracking e mappatura dei frame
-
-Comandi rapidi (PowerShell Windows)
-- python detection.py
-- python tracking.py
-- python metrics.py
-
-File principali da editare per cambiare video
-- [detection.py](detection.py): video_path, model_path
-- [tracking.py](tracking.py): video_path (detection_json è derivato)
-- [metrics.py](metrics.py): video = "outX"
-- [metricsEvaluation.py](metricsEvaluation.py): ANGLE_TO_EVALUATE, percorsi e dimensioni
-
-Suggerimenti
-- Assicurati che il nome file nelle immagini COCO contenga il “video” (es. out4) e l’indice frame parsabile dai pattern regex usati
-- Controlla che tracked/{video}_tracks.json contenga “frame” e “tracks” con campi “id”, “bbox”, “confidence”, “class_id”
-- Se i frame comuni GT↔tracker sono 0, verifica:
-  - la mappatura dei frame
+Module details are in:
+- 2D: 2D_tracking/README.md
+- 3D: 3D_tracking/README.md
 
 ---
 
-## Modulo 3D Tracking (triangolazione, tracking, metriche, viewer, Unreal)
+## Project structure
 
-Per dettagli completi vedi: [3D_tracking/README.md](3D_tracking/README.md)
+```
+CV_Tracking/
+├─ 2D_tracking/
+│  ├─ detection.py                 # YOLO detections
+│  ├─ tracking.py                  # Deep SORT tracking
+│  ├─ metrics.py                   # 2D evaluation utilities
+│  ├─ getVideoFrames.py            # extract frames
+│  ├─ checkFramesCoordination.py   # frame/time alignment checks
+│  ├─ best.pt, best_small.pt       # YOLO weights
+│  ├─ detection/                   # detection outputs (JSON/annotated MP4)
+│  ├─ tracked/                     # tracking outputs (JSON/MP4)
+│  ├─ rDetection/, rTracked/       # rectified outputs for 3D (same formats)
+│  └─ README.md
+│
+├─ 3D_tracking/
+│  ├─ triangulation.py             # multi-view association + triangulation
+│  ├─ 3D_tracker.py                # 3D tracking (players/ball)
+│  ├─ 3dMetrics.py                 # 3D metrics
+│  ├─ displayData.py               # 3D viewer (CSV in meters, Z up)
+│  ├─ export_unreal_engine.py      # export to Unreal (cm, Z-up)
+│  ├─ triangulations/              # per-frame associations/triangulated data
+│  ├─ tracks3d/                    # 3D tracks CSV + stats
+│  ├─ unreal/                      # Unreal CSV/JSONL outputs
+│  └─ README.md
+│
+├─ datasetManipulation/            # dataset utilities (training/analysis)
+│  ├─ datasetStats.py              # stats/EDA on labeled datasets
+│  ├─ dataSplit.py                 # train/val/test split
+│  └─ labelCorrection.py           # label fixing/transforms
+│
+├─ GroundTruthData/                # labeled data (COCO) and notes
+│  ├─ README.dataset.txt
+│  ├─ README.roboflow.txt
+│  └─ train/
+│     ├─ _annotations.coco.json
+│     ├─ _annotations_rectified.coco.json
+│     └─ *.jpg                     # training images
+│
+├─ support_material/
+│  ├─ GT_camera_positions.png
+│  └─ 3D_tracking_material/
+│     ├─ rectified_videos.py       # generate rectified videos
+│     ├─ rectified_GTjson.py       # rectify GT JSON to field coords
+│     └─ camera_data/
+│        ├─ cam_2/ cam_4/ cam_13/  # per-camera bundles
+│        │  ├─ metadata.json
+│        │  ├─ calib/              # camera_calib.json, img_points.json
+│        │  └─ dump/               # calibration logs/snapshots
+│
+├─ raw_video/                      # original input videos
+│  ├─ out2.mp4 out4.mp4 out13.mp4  # + optional *_g1.mp4
+│
+├─ rectified_video/                # rectified videos (for 3D)
+│  ├─ out2.mp4 out4.mp4 out13.mp4
+│
+└─ README.md                       # this file
+```
 
-Quickstart (PowerShell)
-- cd c:\Users\nicol\Desktop\CV_Tracking\3D_tracking
-- Triangolazione: python triangulation.py
-- Tracking 3D: python 3D_tracker.py
-- Metriche 3D: python 3dMetrics.py
+Conventions
+- Coordinates: meters (Z up) in 3D; pixels in 2D.
+- Classes: player, referee, ball. Scripts accept both names and IDs (1=player, 2=referee, 0=ball).
+- Scripts use global CONFIG variables at the top. Adjust paths/parameters before running.
 
-Predizioni 3D
-- Output: [3D_tracking/tracks3d/tracks3d.csv](3D_tracking/tracks3d/tracks3d.csv)
-- Colonne tipiche: t, track_id, class, x, y, z, vx, vy, vz, meas_err_px (unità metri, Z up)
+---
 
-Visualizzatore 3D
-- Script: [3D_tracking/displayData.py](3D_tracking/displayData.py)
-- Configurazione (variabili globali in testa al file):
-  - CSV_PATH: percorso al CSV (metri)
-  - FPS: fps per la barra tempo
-  - FIELD_SIZE: None oppure (LUNGHEZZA, LARGHEZZA) in metri
-- Esecuzione: python 3D_tracking/displayData.py
-- Tasti: SPACE (play/pausa), ←/→ (frame), ↑/↓ (velocità), Q (esci)
+## Requirements
 
-Export per Unreal Engine
-- Script: [3D_tracking/export_unreal_engine.py](3D_tracking/export_unreal_engine.py)
-- Configurazione (variabili globali):
-  - INPUT_CSV: CSV d’ingresso (metri)
-  - OUT_DIR: cartella output
-  - WORLD_ROT_DEG: rotazione antioraria del piano XY (gradi)
-  - WORLD_OFFSET_M: offset (x,y,z) in metri
-  - FPS_TRACKS, CM_PER_M, REBASE_TIME, WRITE_JSONL, SORT_OUTPUT
-- Output:
-  - unreal_tracks.csv (DataTable/Blueprint/Sequencer; include row_name)
-  - unreal_frames.jsonl (1 riga JSON per frame, opzionale)
-- Nota: l’input richiede almeno le colonne t|frame, track_id, class, x|x_m, y|y_m, z
+Recommended
+- Windows, Python 3.10+ (tested on 3.12)
+- Optional CUDA GPU for faster 2D inference
+
+Packages
+- Core: numpy, pandas, matplotlib, opencv-python
+- 2D: ultralytics, deep_sort_realtime, motmetrics
+- 3D: scipy
+
+Virtual environment (PowerShell)
+- python -m venv .venv
+- .\.venv\Scripts\Activate.ps1
+- pip install numpy pandas matplotlib opencv-python scipy ultralytics deep_sort_realtime motmetrics
+
+---
+
+## Quickstart
+
+Before you start
+- Put your raw videos in raw_video/.
+- If needed for 3D, generate rectified videos in rectified_video/ using support_material/3D_tracking_material/rectified_videos.py.
+- Open each script you will run and set the CONFIG section (paths, FPS, etc.).
+
+2D pipeline (per video)
+1) Detections
+- Edit 2D_tracking/detection.py (video_path, model_path)
+- Run: python 2D_tracking/detection.py
+- Outputs: 2D_tracking/detection/
+
+2) Tracking
+- Edit 2D_tracking/tracking.py (same video_path)
+- Run: python 2D_tracking/tracking.py
+- Outputs: 2D_tracking/tracked/
+
+3) (Optional) Metrics and utilities
+- Metrics: python 2D_tracking/metrics.py
+- Frames: python 2D_tracking/getVideoFrames.py
+- Frame/time checks: python 2D_tracking/checkFramesCoordination.py
+
+Details: see 2D_tracking/README.md
+
+3D pipeline (multi-view)
+Prerequisites
+- Per-camera detections/tracks rectified to field space in 2D_tracking/rDetection and 2D_tracking/rTracked.
+- Camera intrinsics/extrinsics in support_material/3D_tracking_material/camera_data.
+
+Steps
+1) Triangulation
+- Edit 3D_tracking/triangulation.py (camera params, inputs)
+- Run: python 3D_tracking/triangulation.py
+- Outputs: 3D_tracking/triangulations/
+
+2) 3D tracking
+- Edit 3D_tracking/3D_tracker.py (model params, FPS)
+- Run: python 3D_tracking/3D_tracker.py
+- Outputs: 3D_tracking/tracks3d/
+
+3) Visualization
+- Edit 3D_tracking/displayData.py (CSV_PATH, FPS, FIELD_SIZE)
+- Run: python 3D_tracking/displayData.py
+
+4) Unreal export
+- Edit 3D_tracking/export_unreal_engine.py (INPUT_CSV, OUT_DIR, WORLD_ROT_DEG, WORLD_OFFSET_M, …)
+- Run: python 3D_tracking/export_unreal_engine.py
+- Outputs: 3D_tracking/unreal/
+
+Details: see 3D_tracking/README.md
+
+---
+
+## Outputs overview
+
+2D
+- detection/: per-frame detections (JSON) and annotated videos (MP4)
+- tracked/: per-frame tracks (JSON) and ID-overlay videos (MP4)
+- rDetection/, rTracked/: rectified outputs for 3D
+
+3D
+- triangulations/: per-frame multi-view associations/points
+- tracks3d/: consolidated 3D tracks CSV + stats
+- unreal/: unreal_tracks.csv and unreal_frames.jsonl
+
+Datasets
+- GroundTruthData/: COCO annotations and images for training/evaluation
+- datasetManipulation/: helpers for splits, corrections, and dataset stats
+
+---
+
+## Tips
+
+- Adjust CONFIG blocks before running any script.
+- Keep consistent names (e.g., out2/out4/out13) across raw, rectified, 2D, and 3D outputs.
+- For camera setup and rectification, check support_material/3D_tracking_material/.
+- For module-specific usage, formats, and troubleshooting, read:
+  - 2D_tracking/README.md
+  - 3D_tracking/README.md

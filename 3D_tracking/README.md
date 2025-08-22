@@ -1,21 +1,21 @@
-# 3D Tracking – Triangolazione, Tracking, Viewer, Metriche, Export Unreal
+# 3D Tracking – Triangulation, Tracking, Viewer, Metrics, Unreal Export
 
-Pipeline completa per il tracking 3D in ambito sportivo: dalle osservazioni 2D multi-camera fino a metriche su piano campo, visualizzazione e export per Unreal Engine.
+Complete 3D tracking pipeline for sports: from multi-camera 2D observations to field-plane metrics, visualization, and export for Unreal Engine.
 
-Contenuti:
-- Struttura cartelle e prerequisiti
-- Dati e convenzioni
-- Pipeline end-to-end
-- Configurazione per script
-- Esecuzione (Quickstart)
-- Formati di input/output
-- Suggerimenti e troubleshooting
+Contents:
+- Folder structure and prerequisites
+- Data and conventions
+- End-to-end pipeline
+- Script configuration
+- Execution (Quickstart)
+- Input/output formats
+- Tips and troubleshooting
 
 ---
 
-## Struttura cartelle e prerequisiti
+## Folder structure and prerequisites
 
-Struttura tipica della cartella 3D_tracking:
+Typical contents of 3D_tracking:
 - triangulation.py
 - 3D_tracker.py
 - 3dMetrics.py
@@ -27,176 +27,176 @@ Struttura tipica della cartella 3D_tracking:
 - triangulations/
   - associations_#.json, triangulated_#.json (per frame)
 - unreal/
-  - unreal_tracks.csv, unreal_frames.jsonl (output export Unreal)
+  - unreal_tracks.csv, unreal_frames.jsonl (Unreal export outputs)
 
-Requisiti (consigliato Python 3.10+):
-- numpy, pandas, matplotlib, scipy, opencv-python (per triangolazione/utility)
+Requirements (Python 3.10+ recommended):
+- numpy, pandas, matplotlib, scipy, opencv-python (for triangulation/utilities)
 
-Installazione rapida (PowerShell):
+Quick install (PowerShell):
 - pip install numpy pandas matplotlib scipy opencv-python
 
 ---
 
-## Dati e convenzioni
+## Data and conventions
 
-- Spazio 3D:
-  - Unità: metri
-  - Z up; XY sul piano campo
-- Classi:
-  - Canoniche: player, referee, ball
-  - Mapping supportato anche da ID: 1→player, 2→referee, 0→ball
-- CSV di predizioni 3D (tracks3d.csv):
-  - Colonne tipiche: t, track_id, class, x, y, z, vx, vy, vz, meas_err_px
-  - Sono accettati alias per colonne (t|frame, x|x_m, …) negli script che lo prevedono
-
----
-
-## Pipeline end-to-end
-
-1) Triangolazione (triangulation.py)
-- Carica calibrazioni (K, R, t) e osservazioni 2D rettificate
-- Matching epipolare e clustering multi-vista
-- Triangolazione (DLT) + refine nonlineare (LM) + stima covarianza
-- Filtri: errore di riproiezione, n. viste minime
-- Output per frame in triangulations/
-
-2) Tracking 3D (3D_tracker.py)
-- Filtra e deduplica triangolazioni
-- Modello CV per player/referee; modello balistico per ball
-- Associazione con distanza di Mahalanobis e gating chi^2
-- Gestione conferma/assenza/terminazione tracce
-- Output snapshot: tracks3d/tracks3d.csv e stats.json
-
-3) Visualizzatore 3D (displayData.py)
-- Riproduzione frame-by-frame con controlli tastiera
-- Disegno campo (bounding box dati o dimensioni preimpostate)
-- Frecce direzione (yaw) opzionali per player/referee
-
-4) Metriche 3D (3dMetrics.py)
-- Proiezione GT su piano campo via omografie
-- Allineamento temporale GT→pred (FRAME_SCALE/OFFSET)
-- Dedup GT e post-processing pred opzionali
-- Matching metrico e calcolo metriche (detection/posizione, tracking opzionale)
-
-5) Export per Unreal Engine (export_unreal_engine.py)
-- Conversione metri→centimetri, rotazione/offset mondo, stima yaw
-- CSV per DataTable/Blueprint/Sequencer + JSONL per frame
+- 3D space:
+  - Units: meters
+  - Z up; XY is the field plane
+- Classes:
+  - Canonical: player, referee, ball
+  - Mapping also supported from IDs: 1→player, 2→referee, 0→ball
+- 3D predictions CSV (tracks3d.csv):
+  - Typical columns: t, track_id, class, x, y, z, vx, vy, vz, meas_err_px
+  - Column aliases (t|frame, x|x_m, …) are accepted where supported by scripts
 
 ---
 
-## Configurazione per script
+## End-to-end pipeline
 
-Triangolazione (triangulation.py)
-- Percorsi calibrazioni e osservazioni
-- Soglie per errore di riproiezione, min views
+1) Triangulation (triangulation.py)
+- Load calibrations (K, R, t) and rectified 2D observations
+- Epipolar matching and multi-view clustering
+- Triangulation (DLT) + non-linear refine (LM) + covariance estimate
+- Filters: reprojection error, min number of views
+- Per-frame output in triangulations/
 
-Tracking 3D (3D_tracker.py)
-- Parametri modello (rumori, gravità), gating chi^2
-- Soglie dedup e gestione conferme/miss
+2) 3D Tracking (3D_tracker.py)
+- Filter and deduplicate triangulations
+- CV model for player/referee; ballistic model for ball
+- Association via Mahalanobis distance and chi^2 gating
+- Track confirm/miss/termination logic
+- Outputs: tracks3d/tracks3d.csv and stats.json
+
+3) 3D Viewer (displayData.py)
+- Frame-by-frame playback with keyboard controls
+- Field drawing (data bounding box or preset dimensions)
+- Optional direction arrows (yaw) for player/referee
+
+4) 3D Metrics (3dMetrics.py)
+- Project GT to field plane via homographies
+- Temporal alignment GT→pred (FRAME_SCALE/OFFSET)
+- Optional GT dedup and pred post-processing
+- Metric matching and computation (detection/position, optional tracking)
+
+5) Export to Unreal Engine (export_unreal_engine.py)
+- Meters→centimeters conversion, world rotation/offset, yaw estimation
+- CSV for DataTable/Blueprint/Sequencer + per-frame JSONL
+
+---
+
+## Script configuration
+
+Triangulation (triangulation.py)
+- Paths to calibrations and observations
+- Thresholds for reprojection error, min views
+
+3D Tracking (3D_tracker.py)
+- Model parameters (noises, gravity), chi^2 gating
+- Dedup thresholds and confirm/miss handling
 - FPS
 
-Viewer 3D (displayData.py)
-- CSV_PATH: percorso al CSV (metri, Z up)
-- FPS: fps per barra tempo
-- FIELD_SIZE: None oppure (LUNGHEZZA, LARGHEZZA) in metri
+3D Viewer (displayData.py)
+- CSV_PATH: path to CSV (meters, Z up)
+- FPS: fps for time bar
+- FIELD_SIZE: None or (LENGTH, WIDTH) in meters
 
-Metriche 3D (3dMetrics.py)
+3D Metrics (3dMetrics.py)
 - TRACKS3D_CSV, COCO_GT_PATH, CAMERA_DATA
 - FRAME_SCALE, FRAME_OFFSET
-- Gating e soglie per matching e dedup GT
-- Abilitazione post-processing (stitch/speed/smooth/NMS) e tracking metrics
+- Gating and thresholds for matching and GT dedup
+- Enable post-processing (stitch/speed/smooth/NMS) and tracking metrics
 
-Export Unreal (export_unreal_engine.py)
-- INPUT_CSV: CSV d’ingresso (metri)
-- OUT_DIR: cartella output (es. 3D_tracking/unreal)
-- FPS_TRACKS: fps delle tracce (per time_s)
-- CM_PER_M: 100.0 (UE usa cm)
-- WORLD_ROT_DEG: rotazione antioraria piano XY (gradi)
-- WORLD_OFFSET_M: (x, y, z) in metri
-- REBASE_TIME: se True, time_s parte da min(t)
+Unreal Export (export_unreal_engine.py)
+- INPUT_CSV: input CSV (meters)
+- OUT_DIR: output folder (e.g., 3D_tracking/unreal)
+- FPS_TRACKS: track fps (for time_s)
+- CM_PER_M: 100.0 (UE uses cm)
+- WORLD_ROT_DEG: counterclockwise XY-plane rotation (degrees)
+- WORLD_OFFSET_M: (x, y, z) in meters
+- REBASE_TIME: if True, time_s starts from min(t)
 - WRITE_JSONL, SORT_OUTPUT
 
 ---
 
-## Esecuzione (Quickstart)
+## Execution (Quickstart)
 
 PowerShell (Windows):
 - cd c:\Users\nicol\Desktop\CV_Tracking\3D_tracking
 
-Triangolazione:
+Triangulation:
 - python triangulation.py
 
-Tracking 3D:
+3D Tracking:
 - python 3D_tracker.py
 
-Visualizzatore:
+Viewer:
 - python displayData.py
-- Tasti: SPACE (play/pausa), ←/→ (frame), ↑/↓ (velocità), Q (esci)
+- Keys: SPACE (play/pause), ←/→ (frame), ↑/↓ (speed), Q (quit)
 
-Metriche:
+Metrics:
 - python 3dMetrics.py
 
-Export Unreal:
+Unreal Export:
 - python export_unreal_engine.py
-- Output in: 3D_tracking/unreal
+- Output: 3D_tracking/unreal
 
 ---
 
-## Formati di input/output
+## Input/output formats
 
-Predizioni 3D (tracks3d/tracks3d.csv)
-- t (int), track_id (int), class (str|int), x, y, z (float, metri)
-- Opzionali: vx, vy, vz, meas_err_px
+3D predictions (tracks3d/tracks3d.csv)
+- t (int), track_id (int), class (str|int), x, y, z (float, meters)
+- Optional: vx, vy, vz, meas_err_px
 
-Export Unreal
-- unreal_tracks.csv (centimetri, Z up)
+Unreal Export
+- unreal_tracks.csv (centimeters, Z up)
   - row_name: "{class}_{track_id}_{frame}"
   - track_id, class, frame, time_s, x_cm, y_cm, z_cm, yaw_deg
-- unreal_frames.jsonl (opzionale, 1 riga per frame)
-  - Per frame t: { "frame": t, "time_s": ..., "objects": [ { "id", "class", "x", "y", "z", "yaw" }, ... ] }
+- unreal_frames.jsonl (optional, 1 line per frame)
+  - For frame t: { "frame": t, "time_s": ..., "objects": [ { "id", "class", "x", "y", "z", "yaw" }, ... ] }
 
-Viewer 3D
-- Legge tracks3d.csv (alias colonne supportati)
-- Disegna 3 scatter per classi + quiver per direzione
+3D Viewer
+- Reads tracks3d.csv (column aliases supported)
+- Plots 3 scatter per class + quiver for direction
 
-Metriche (3dMetrics.py)
-- metrics_summary.json con metrica detection (per soglie), posizione (MAE/RMSE/percentili), tracking opzionale (CLEAR-MOT/IDF1)
+Metrics (3dMetrics.py)
+- metrics_summary.json with detection metric (by thresholds), position (MAE/RMSE/percentiles), optional tracking (CLEAR-MOT/IDF1)
 
 ---
 
-## Suggerimenti e troubleshooting
+## Tips and troubleshooting
 
-- Colonne/alias:
-  - Gli script accettano alias per t|frame, track_id|id, class|label|category, x|x_m, y|y_m, z|z_m
-- Classi:
-  - Accetta sia nomi che ID; mapping interno normalizza a player/referee/ball
+- Columns/aliases:
+  - Scripts accept aliases for t|frame, track_id|id, class|label|category, x|x_m, y|y_m, z|z_m
+- Classes:
+  - Accepts both names and IDs; internal mapping normalizes to player/referee/ball
 - Yaw:
-  - Calcolato dalla direzione nel piano XY in world space; se oggetto fermo → yaw=0
+  - Computed from direction in XY plane in world space; if object is stationary → yaw=0
 - Unreal:
-  - Impostare WORLD_ROT_DEG/WORLD_OFFSET_M per allineare coordinate a livello mappa UE
-  - UE usa centimetri; output già convertito
-- Visualizzatore:
-  - Se non si specifica FIELD_SIZE, usa il bounding box XY dei dati
-- Allineamento metriche:
-  - FRAME_SCALE/OFFSET devono riflettere il rapporto FPS GT↔pred (es. GT 5 fps vs pred 25fps)
+  - Set WORLD_ROT_DEG/WORLD_OFFSET_M to align coordinates at UE map level
+  - UE uses centimeters; output is already converted
+- Viewer:
+  - If FIELD_SIZE is not specified, uses XY bounding box of data
+- Metrics alignment:
+  - FRAME_SCALE/OFFSET must reflect GT↔pred FPS ratio (e.g. GT 5 fps vs pred 25fps)
 - Troubleshooting:
-  - Errori comuni includono:
-    - FRAME_SCALE/OFFSET errati → allineamento temporale sbagliato
-    - Calibrazioni incoerenti → triangolazione/associazione errata
-    - Parametri di gating troppo stretti → tracce mancanti o frammentate
-    - Alias colonne non riconosciuti → errore lettura CSV
-  - Controllare i log di output per messaggi di errore o avviso
-  - Verificare visivamente i risultati con il visualizzatore 3D
-  - Eseguire il debug passo-passo per isolare problemi in specifici script o funzioni
+  - Common errors include:
+    - Incorrect FRAME_SCALE/OFFSET → wrong temporal alignment
+    - Inconsistent calibrations → triangulation/association errors
+    - Too tight gating parameters → missing or fragmented tracks
+    - Unrecognized column aliases → CSV reading error
+  - Check output logs for error or warning messages
+  - Visually verify results with 3D viewer
+  - Step-by-step debug to isolate issues in specific scripts or functions
 
 ---
 
-## Note di progettazione
+## Design notes
 
-- Normalizzazione ID camera: outN → cam_N (regex/normalizer).
-- Punto di confronto GT:
-  - Player/Referee: bottom-center bbox (punto a terra).
-  - Ball: centro bbox (può essere in aria).
-- Stabilità/performance:
-  - Cache di H^(-1) per camera, soglie conservative per stitching e NMS.
-- Alcune parti possono richiedere completamento/rifinitura del codice dove presenti
+- Camera ID normalization: outN → cam_N (regex/normalizer).
+- GT reference points:
+  - Player/Referee: bottom-center bbox (ground point).
+  - Ball: center bbox (can be in the air).
+- Stability/performance:
+  - H^(-1) cache for camera, conservative thresholds for stitching and NMS.
+- Some parts may require code completion/refinement where present
