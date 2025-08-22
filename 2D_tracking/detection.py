@@ -4,10 +4,12 @@ import os
 import json
 
 # Config
-video_path = "../rectified_video/out13.mp4"
+# video_path = "../rectified_video/out13.mp4"
+video_path = "../raw_video/out13.mp4"
 model_path = "best.pt"
 video_name = os.path.splitext(os.path.basename(video_path))[0]
-output_dir = "rDetection"
+output_dir = "detection"
+#output_dir = "rDetection"
 output_json = os.path.join(output_dir, f"{video_name}_detections.json")
 output_video = os.path.join(output_dir, f"{video_name}_annotated.mp4")
 conf_threshold = 0.3

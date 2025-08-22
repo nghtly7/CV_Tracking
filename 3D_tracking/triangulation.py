@@ -1,5 +1,4 @@
 """
-Triangola punti 3D da osservazioni 2D multi-camera:
 - carica calibrazioni (K,R,t) e osservazioni per camera
 - esegue matching epipolare per coppie di camere (Sampson + costo composito) e clustering multi-vista
 - triangola (DLT), rifinisce con Levenberg-Marquardt e stima la covarianza

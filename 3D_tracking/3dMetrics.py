@@ -3,14 +3,14 @@ Valuta il tracking 3D:
 - carica predizioni 3D (CSV) e ground truth COCO rettificato
 - carica calibrazioni e costruisce omografie per proiettare il GT sul piano campo
 - allinea temporalmente (FRAME_SCALE/OFFSET), proietta e deduplica GT cross-camera
-- (nuovo) post-processing delle predizioni: stitching, filtro lunghezza minima, filtro velocità "two-strike",
-         smoothing zero-lag, NMS metrico per frame/classe
+- post-processing delle predizioni: stitching, filtro lunghezza minima, filtro velocità "two-strike",
+  smoothing zero-lag, NMS metrico per frame/classe
 - confronta GT e predizioni con matching Hungarian per classi e soglie
 - calcola metriche di detection (Precision/Recall/F1) e di posizione (MAE, RMSE, percentili)
-- (nuovo) metriche di tracking (CLEAR-MOT e IDF1) sul piano campo
+- metriche di tracking (CLEAR-MOT e IDF1) sul piano campo
 - stampa un riepilogo in tabelle e salva i risultati in JSON
 
-NOTE DI PROGETTAZIONE IN QUESTA VERSIONE
+NOTE DI PROGETTAZIONE
 1) Normalizzazione ID camera (out2/out4/out13 -> cam_2/cam_4/cam_13) con normalize_cam_id.
 2) Punto bbox: BALL=centro bbox (può essere in aria); PLAYER/REFEREE=bottom-center (punto a terra).
 3) Fallback dimensioni immagine da COCO robusto (DEFAULT_IMG_SIZE per camere viste senza width/height).
@@ -21,7 +21,6 @@ NOTE DI PROGETTAZIONE IN QUESTA VERSIONE
    - filtro velocità “two-strike” (serve >soglia per almeno 2 step consecutivi)
    - smoothing zero-lag (moving average centrato) per ridurre jitter senza ritardo
    - NMS metrico framewise per ridurre duplicati vicini, meno aggressivo sui player.
-7) Stampa metriche migliorata con tabelle ASCII allineate.
 """
 
 import json
